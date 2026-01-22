@@ -1,4 +1,6 @@
-﻿namespace lesson
+﻿using System.Security.Cryptography;
+
+namespace lesson
 {
     public class Program
     {
@@ -8,11 +10,338 @@
         /// <param name="args">The arguments passed to the program</param>
         public static void Main(string[] args)
         {
-            // Write some code here...
-            int n = Convert.ToInt32(Console.ReadLine());
+            // definire:
+            // - l'algoritmo (o gli algoritmi) di cui fare il benchmark
+            //   in questo caso "Algoritmi di ricerca"
+            // - i test cases (casi numerosi ma univoci, uguali per tutti)
+            //   su cui far girare gli algoritmi. I test cases spesso hanno un nome
+            //   "ordinato", "ordinato al contrario" "casuale" etc...
+            // - calcolare i tempi (media, varianza)
 
-            Console.WriteLine("Il perimetro del quadrato è " + n * 4);
-            Console.WriteLine("L'area del quadrato è " + n * n);
+            int choice = Menu();
+
+            switch (choice)
+            {
+                case 1:
+                    BenchmarkSearch();
+                    break;
+                case 2:
+                    BenchmarkSort();
+                    break;
+                default:
+                    Console.WriteLine("Scelta non valida");
+                    break;
+            }
+        }
+
+        private static void BenchmarkSort()
+        {
+            throw new NotImplementedException();
+        }
+
+        private static void BenchmarkSearch()
+        {
+            Console.WriteLine("Benchmark degli algoritmi di ricerca...");
+
+            // Abbiamo (algoritmi)
+            // - ricerca sequenziale
+            // - ricerca sequenziale ottimizzata
+            // - ricerca binaria
+            //
+            // Abbiamo (casi)
+            // - vettori di dimensioni diverse
+            // - vettori ordinati e non
+            // - vettori ordinati al contrario
+            // - vettori parzialmente ordinati
+            //
+            // Abbiamo (unità di misura target) = ms
+
+            int[][] cases = GenerateBenchmarkCases(10000, false);
+            int[][] sortedCases = GenerateBenchmarkCases(1000, true);
+
+            int[] sequentialSearchTimes = BenchmarkSequentialSearch(cases);
+            int[] sortedSequentialSearchTimes = BenchmarkSequentialSearch(sortedCases);
+
+            int[] optimizedSequantialSearchTimes = BenchmarkOptimizedSequentialSearch(cases);
+            int[] sortedOptimizedSequantialSearchTimes = BenchmarkOptimizedSequentialSearch(sortedCases);
+
+            int[] binarySearchTimes = BenchmarkBinarySearch(cases);
+            int[] sortedBinarySearchTimes = BenchmarkBinarySearch(sortedCases);
+
+            PrintTimes("Ricerca sequenziale", sequentialSearchTimes);
+            PrintTimes("Ricerca sequenziale Ordinata", sortedSequentialSearchTimes);
+
+            PrintTimes("Ricerca sequanziale ottimizzata", optimizedSequantialSearchTimes);
+            PrintTimes("Ricerca sequanziale ottimizzata e ordinata", sortedOptimizedSequantialSearchTimes);
+
+            PrintTimes("Ricerca binaria", binarySearchTimes);
+            PrintTimes("Ricerca binaria ordinata", sortedBinarySearchTimes);
+        }
+
+        /// <summary>
+        /// Stampa i tempi di un benchmark.
+        /// </summary>
+        /// <param name="name">Nome visualizzato del benchmark</param>
+        /// <param name="times">I tempi da stampare</param>
+        private static void PrintTimes(string name, int[] times)
+        {
+            Console.WriteLine($"{name} :");
+
+            // media
+            double average = times[0];
+            for (int i = 1; i < times.Length; i++)
+            {
+                average += times[i];
+            }
+            average /= times.Length;
+
+            // scarto quadratico medio
+            double discardAvg = 0;
+            for (int i = 0; i < times.Length; i++)
+            {
+                double discard = times[i] - average;
+                discardAvg += discard * discard;
+            }
+            discardAvg = Math.Sqrt(discardAvg);
+
+            Console.WriteLine($"Media (ms): {average}, Scarto quadratico medio (ms): {discardAvg}");
+        }
+
+        private static int[] BenchmarkBinarySearch(int[][] cases)
+        {
+            int[] times = new int[cases.Length];
+
+            for (int i = 0; i < cases.Length; i++)
+            {
+                times[i] = BenchmarkBinarySequentialSearchCase(cases[i]);
+            }
+
+            return times;
+        }
+
+        private static int BenchmarkBinarySequentialSearchCase(int[] benchCase)
+        {
+            DateTime start = DateTime.Now;
+
+            // cerchiamo sempre l'elemento a metà, per comodità, ma si può cambiare
+            int index = BinarySequentialSearch(benchCase, benchCase[benchCase.Length / 2]);
+            if (index == -1)
+            {
+                Console.WriteLine("ERRORE IMPORTANTE");
+            }
+
+            DateTime end = DateTime.Now;
+
+            return (int)(end - start).TotalMilliseconds;
+        }
+
+        private static int BinarySequentialSearch(int[] benchCase, int value)
+        {
+            int inf = 0;
+            int sup = benchCase.Length - 1;
+
+            while(inf <= sup)
+            {
+                int mid = (inf + sup) / 2;
+
+                if(value > mid)
+                {
+                    inf = mid;
+                    mid++;
+                }
+                else if(value < mid)
+                {
+                    sup = mid - 1;
+                    
+                }
+                else
+                {
+                    return mid;
+                }
+            }
+            return inf;
+        }
+
+        private static int[] BenchmarkOptimizedSequentialSearch(int[][] cases)
+        {
+            int[] times = new int[cases.Length];
+
+            for (int i = 0; i < cases.Length; i++)
+            {
+                times[i] = BenchmarkOptimizedSequentialSearchCase(cases[i]);
+            }
+
+            return times;
+        }
+
+        private static int BenchmarkOptimizedSequentialSearchCase(int[] benchCase)
+        {
+            DateTime start = DateTime.Now;
+
+            // cerchiamo sempre l'elemento a metà, per comodità, ma si può cambiare
+            int index = OptimizedSequentialSearch(benchCase, benchCase[benchCase.Length / 2]);
+            if (index == -1)
+            {
+                Console.WriteLine("ERRORE IMPORTANTE");
+            }
+
+            DateTime end = DateTime.Now;
+
+            return (int)(end - start).TotalMilliseconds;
+        }
+
+        private static int OptimizedSequentialSearch(int[] benchCase, int value)
+        {
+            int i = 0;
+            bool isFound = false;
+
+            while (i != benchCase.Length && !isFound)
+            {
+                if (benchCase[i] == value)
+                {
+                    isFound = true;
+                }
+                else
+                {
+                    i++;
+                }
+            }
+            if (i == benchCase.Length)
+            {
+                return -1;
+            }
+            else
+            {
+                return i;
+            }
+        }
+
+        /// <summary>
+        /// Effetua un benchmark della ricerca sequenziale
+        /// </summary>
+        /// <param name="cases">I bench cases da usare</param>
+        /// <returns>I tempi dei benchmark</returns>
+        private static int[] BenchmarkSequentialSearch(int[][] cases)
+        {
+            int[] times = new int[cases.Length];
+
+            for (int i = 0; i < cases.Length; i++)
+            {
+                times[i] = BenchmarkSequentialSearchCase(cases[i]);
+            }
+
+            return times;
+        }
+
+        /// <summary>
+        /// Restituisce il tempo di benchmark per un singolo caso di 
+        /// ricerca sequenziale.
+        /// </summary>
+        /// <param name="benchCase">il bench case</param>
+        /// <returns>Il tempo del benchmark</returns>
+        private static int BenchmarkSequentialSearchCase(int[] benchCase)
+        {
+            DateTime start = DateTime.Now;
+
+            // cerchiamo sempre l'elemento a metà, per comodità, ma si può cambiare
+            int index = SequentialSearch(benchCase, benchCase[benchCase.Length / 2]);
+            if (index == -1)
+            {
+                Console.WriteLine("ERRORE IMPORTANTE");
+            }
+
+            DateTime end = DateTime.Now;
+
+            return (int)(end - start).TotalMilliseconds;
+        }
+
+        private static int SequentialSearch(int[] benchCase, int value)
+        {
+            for (int i = 0; i < benchCase.Length; i++)
+            {
+                if (benchCase[i] == value)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        /// <summary>
+        /// Genera i vettori da usare in tutti i benchmark:
+        /// - vettori di dimensioni diverse
+        /// - vettori ordinati e non
+        /// - vettori ordinati al contrario
+        /// - vettori parzialmente ordinati
+        /// </summary>
+        /// <returns>I vettori generati</returns>
+        private static int[][] GenerateBenchmarkCases(int n, bool sorted)
+        {
+            int[][] cases = new int[n][];
+
+            for (int i = 0; i < n; i++)
+            {
+                cases[i] = GenerateRandomBenchmarkCase(i * 10 + 1, sorted);
+            }
+
+            return cases;
+        }
+
+        /// <summary>
+        /// Genera un singolo case (un vettore casuale)
+        /// </summary>
+        /// <returns>Un vettore generato casualmente</returns>
+        private static int[] GenerateRandomBenchmarkCase(int n, bool sorted)
+        {
+            Random rnd = new Random();
+            int[] benchCase = new int[n];
+
+            for (int i = 0; i < n; i++)
+            {
+
+                //se voglio una generazione ordinata, devo
+                //poter manipolare il minimo (deve essere il valore
+                //dell'elemento precendente + 1) 
+                int min;
+
+                if(sorted || i == 0)
+                {
+                    //tuttavia al primo giro non ho un precedente,
+                    //quindi devo impostare zero
+                    //
+                    //Cosa che devo fare a nche qualora la generazione
+                    //ordinata io non la voglia proprio
+                    min = 0;
+                }
+                else
+                {
+                    min = benchCase[i - 1] + 1;
+                }
+
+                int max = min + 10000;
+
+                //a quel punto la generazione procede come prima
+                benchCase[i] = rnd.Next(min, max);
+            }
+
+            return benchCase;
+        }
+
+        private static int Menu()
+        {
+            int choice;
+
+            do
+            {
+                Console.WriteLine("1 -> Benchmark ricerca");
+                Console.WriteLine("2 -> Benchmark ordinamento");
+
+                choice = Convert.ToInt32(Console.ReadLine());
+            }
+            while (choice < 1 || choice > 2);
+
+            return choice;
         }
     }
 }
